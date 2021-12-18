@@ -11,7 +11,7 @@
             "cargo": {
                 "args": [
                     "build",
-                    "--bin=16",
+                    "--bin=17",
                     "--package=advent_of_code"
                 ],
                 "filter": {
