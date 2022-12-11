@@ -7,3 +7,5 @@ edition = "2021"
 
 [dependencies]
 itertools = "0.10.*"
+evalexpr = "8.1.*"
+regex = "1.*"
