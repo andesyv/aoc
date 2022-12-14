@@ -171,6 +171,7 @@ fn main() {
     );
     draw_grid(&grid);
 
+    let mut grid = parse(INPUT);
     println!("After adding a floor...");
     let max_y = grid.0.keys().map(|(_, y)| *y).max().unwrap();
     grid.1 = Some(max_y + 2);
