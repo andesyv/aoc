@@ -1,7 +1,8 @@
-use std::collections::HashMap;
 use std::collections::hash_map::DefaultHasher;
+use std::collections::{HashMap, HashSet};
 use std::hash::{Hash, Hasher};
 
+use num::integer::lcm;
 use regex::Regex;
 
 const EXAMPLE_INPUT: &str = "RL
@@ -83,59 +84,92 @@ fn get_required_steps_to_get_to_goal(input: &str) -> u64 {
     steps
 }
 
-fn get_recurring_pattern_of_start_pos(dirs: &str, nodes: &HashMap<String, (String, String)>, pos: &str) -> u64 {
-  nodes.iter().map(|(keys, values)|keys.as_str().hash)
-  for step in 0.. {
-    
-  }
-
-  let mut steps: u64 = 0;
-
-
-  let mut dir_it = dirs.chars().cycle();
-  while positions
-      .iter()
-      .any(|pos| pos.chars().last().unwrap() != 'Z')
-  {
-      let dir = dir_it.next().unwrap();
-      for pos in positions.iter_mut() {
-          let (left, right) = nodes.get(pos).unwrap();
-          *pos = (if dir == 'L' { left } else { right }).clone();
-      }
-      steps += 1;
-      if steps % 1000000 == 0 {
-        println!("Steps: {}", steps);
-      }
-  }
+fn calc_hash<T: Hash + ?Sized>(t: &T) -> u64 {
+    let mut hasher = DefaultHasher::new();
+    t.hash(&mut hasher);
+    hasher.finish()
 }
 
-fn get_required_steps_to_get_to_goal_2(input: &str) -> u64 {
-    let (dirs, nodes) = parse(input).unwrap();)
+// It seems the task was nice enough to choose a set of direction steps such that the recurring pattern never changes (which is not a given I think?)
+// We thus only have to find the first pattern
+fn get_recurring_pattern_step_size_of_start_pos(
+    dirs: &str,
+    nodes: &HashMap<String, (String, String)>,
+    start_pos: &str,
+) -> u64 {
+    let hashed_nodes: HashMap<u64, (u64, u64)> = nodes
+        .iter()
+        .map(|(key, (left, right))| (calc_hash(key), (calc_hash(left), calc_hash(right))))
+        .collect();
+    let mut pos = calc_hash(start_pos);
+    let valid_end_positions: HashSet<_> = nodes
+        .keys()
+        .filter(|key| key.chars().last().unwrap() == 'Z')
+        .map(calc_hash)
+        .collect();
+    let dir_list: Vec<_> = dirs.chars().collect();
+
+    // let mut recurring_patterns: Vec<u64> = Vec::new();
+
+    // let mut pattern_counter = 0;
+
+    for step in 0u64.. {
+        if valid_end_positions.contains(&pos) {
+            return step;
+            // let previous_pattern_steps: u64 = recurring_patterns.iter().sum();
+            // let step_diff = step - previous_pattern_steps;
+            // recurring_patterns.push(step_diff);
+            // pattern_counter += 1;
+            // if pattern_counter == 30 {
+            //     return recurring_patterns;
+            // }
+            // if previous_pattern_steps == step_diff {
+            //     return recurring_patterns;
+            // }
+        }
+        let dir = dir_list[(step % dir_list.len() as u64) as usize];
+        let (left, right) = hashed_nodes.get(&pos).unwrap();
+        pos = if dir == 'L' { *left } else { *right };
+    }
+    // recurring_patterns
+    0
+}
+
+fn get_required_steps_to_get_to_goal_2(input: &str) -> u128 {
+    let (dirs, nodes) = parse(input).unwrap();
     // let mut pos = "AAA";
-    let mut positions: Vec<String> = nodes
+    let positions: Vec<String> = nodes
         .keys()
         .filter(|name| name.chars().last().unwrap() == 'A')
         .cloned()
         .collect();
 
-    let mut steps = 0;
-    let mut dir_it = dirs.chars().cycle();
-    while positions
+    positions
         .iter()
-        .any(|pos| pos.chars().last().unwrap() != 'Z')
-    {
-        let dir = dir_it.next().unwrap();
-        for pos in positions.iter_mut() {
-            let (left, right) = nodes.get(pos).unwrap();
-            *pos = (if dir == 'L' { left } else { right }).clone();
-        }
-        steps += 1;
-        if steps % 1000000 == 0 {
-          println!("Steps: {}", steps);
-        }
-    }
+        .map(|start_pos| {
+            u128::from(get_recurring_pattern_step_size_of_start_pos(
+                dirs, &nodes, &start_pos,
+            ))
+        })
+        .reduce(|acc, x| lcm(acc, x))
+        .unwrap_or(0)
 
-    steps
+    // let mut steps = 0;
+    // let mut dir_it = dirs.chars().cycle();
+    // while positions
+    //     .iter()
+    //     .any(|pos| pos.chars().last().unwrap() != 'Z')
+    // {
+    //     let dir = dir_it.next().unwrap();
+    //     for pos in positions.iter_mut() {
+    //         let (left, right) = nodes.get(pos).unwrap();
+    //         *pos = (if dir == 'L' { left } else { right }).clone();
+    //     }
+    //     steps += 1;
+    //     if steps % 1000000 == 0 {
+    //         println!("Steps: {}", steps);
+    //     }
+    // }
 }
 
 fn main() {
