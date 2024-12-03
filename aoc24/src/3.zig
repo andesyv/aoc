@@ -74,25 +74,64 @@ fn parseMult(slice: []const u8) ?MultStatement {
     };
 }
 
-fn parseMults(allocator: std.mem.Allocator, input: []const u8) !std.ArrayList(MultStatement) {
+fn parseDo(slice: []const u8) ?bool {
+    const prefix = "do()";
+    if (slice.len < prefix.len) {
+        return null;
+    }
+
+    if (!std.mem.eql(u8, slice[0..prefix.len], prefix)) {
+        return null;
+    }
+
+    return true;
+}
+
+fn parseDont(slice: []const u8) ?bool {
+    const prefix = "don't()";
+    if (slice.len < prefix.len) {
+        return null;
+    }
+
+    if (!std.mem.eql(u8, slice[0..prefix.len], prefix)) {
+        return null;
+    }
+
+    return false;
+}
+
+fn parseDosAndDont(slice: []const u8) ?bool {
+    return parseDo(slice) orelse parseDont(slice);
+}
+
+fn parseMults(allocator: std.mem.Allocator, input: []const u8, parse_dos_and_donts: bool) !std.ArrayList(MultStatement) {
     // This would've been super easy with regular expressions. However, Zig does not have em.
     // So this will have to be a good practice in manual parsing...
     var list = std.ArrayList(MultStatement).init(allocator);
+    var mults_enabled = true;
     for (0..input.len) |i| {
         // We could optimize by skipping a few tokens whenever we parse something, but Zig is blazingly
         // fast as is so there probably would be no point.
         if (parseMult(input[i..])) |mult| {
-            try list.append(mult);
+            if (mults_enabled) {
+                try list.append(mult);
+            }
+        }
+
+        if (parse_dos_and_donts) {
+            if (parseDosAndDont(input[i..])) |enable| {
+                mults_enabled = enable;
+            }
         }
     }
 
     return list;
 }
 
-fn sumOfMultsFromInput(allocator: std.mem.Allocator, input: []const u8) !u32 {
+fn sumOfMultsFromInput(allocator: std.mem.Allocator, input: []const u8, parse_dos_and_donts: bool) !u32 {
     // Zig also doesn't have a fold yet :/
     var sum: u32 = 0;
-    const mults = try parseMults(allocator, input);
+    const mults = try parseMults(allocator, input, parse_dos_and_donts);
     defer mults.deinit();
 
     for (mults.items) |mult| {
@@ -106,12 +145,20 @@ pub fn main() void {
     const res = @import("inputs");
     const allocator = std.heap.page_allocator;
 
-    const sum_of_mults = sumOfMultsFromInput(allocator, res.input_3) catch |err| {
+    var sum_of_mults = sumOfMultsFromInput(allocator, res.input_3, false) catch |err| {
         std.debug.panic("Calculating sum of mults failed with this error: {any}\n", .{err});
     };
 
     const stdout = std.io.getStdOut();
     std.fmt.format(stdout.writer(), "Sum of multiplications: {d}\n", .{sum_of_mults}) catch |err| {
+        std.debug.panic("Writing to stdout failed with the following error: {any}\n", .{err});
+    };
+
+    sum_of_mults = sumOfMultsFromInput(allocator, res.input_3, true) catch |err| {
+        std.debug.panic("Calculating sum of mults failed with this error: {any}\n", .{err});
+    };
+
+    std.fmt.format(stdout.writer(), "Sum of multiplications with do() and don't() instructions: {d}\n", .{sum_of_mults}) catch |err| {
         std.debug.panic("Writing to stdout failed with the following error: {any}\n", .{err});
     };
 }
@@ -150,7 +197,7 @@ test "multi digit parsing" {
 
 test "parse mults" {
     const test_allocator = std.testing.allocator;
-    const sut = try parseMults(test_allocator, example_input);
+    const sut = try parseMults(test_allocator, example_input, false);
     defer sut.deinit();
 
     const expected = [_]MultStatement{
@@ -168,7 +215,16 @@ test "parse mults" {
 
 test "sum of mults" {
     const test_allocator = std.testing.allocator;
-    const sut = try sumOfMultsFromInput(test_allocator, example_input);
+    const sut = try sumOfMultsFromInput(test_allocator, example_input, false);
 
     try std.testing.expectEqual(161, sut);
+}
+
+const example_input_2 = "xmul(2,4)&mul[3,7]!^don't()_mul(5,5)+mul(32,64](mul(11,8)undo()?mul(8,5))";
+
+test "sum of mults with dos and donts" {
+    const test_allocator = std.testing.allocator;
+    const sut = try sumOfMultsFromInput(test_allocator, example_input_2, true);
+
+    try std.testing.expectEqual(48, sut);
 }
