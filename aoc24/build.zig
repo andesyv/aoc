@@ -4,7 +4,7 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    const source_file = "src/4.zig";
+    const source_file = "src/5.zig";
 
     const inputs_module = b.createModule(.{
         .root_source_file = b.path("inputs/res.zig"),
