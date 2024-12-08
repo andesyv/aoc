@@ -36,6 +36,13 @@ impl Pos {
         }
     }
 
+    fn mul(self: &Pos, num: i64) -> Pos {
+        Pos {
+            x: self.x.wrapping_mul(num),
+            y: self.y.wrapping_mul(num),
+        }
+    }
+
     fn is_within_map(&self, width: i64, height: i64) -> bool {
         0 <= self.x && 0 <= self.y && self.x < width && self.y < height
     }
@@ -94,10 +101,56 @@ fn get_count_of_unique_antinodes_for_antennas(input: &str) -> u32 {
     u32::try_from(antinodes.len()).unwrap()
 }
 
+fn get_antinodes_for_antenna_set_with_harmonics(antennas: &[Pos], width: i64, height: i64) -> HashSet<Pos> {
+    let mut antinodes = HashSet::new();
+
+    for a in antennas {
+        for b in antennas {
+            if b == a { continue; }
+
+            // First add both a and b (as they are their own antinode)
+            antinodes.insert(*a);
+            antinodes.insert(*b);
+
+            let diff = b.sub(a);
+            // In the direction of b -> a, add incremental nodes until we reach the end
+            for i in 1i64.. {
+                let a_antinode = a.sub(&diff.mul(i));
+                if !a_antinode.is_within_map(width, height) { break; }
+                antinodes.insert(a_antinode);
+            }
+
+            // Now do the same thing in the other direction:
+            for i in 1i64.. {
+                let b_antinode = a.add(&diff.mul(i));
+                if !b_antinode.is_within_map(width, height) { break; }
+                antinodes.insert(b_antinode);
+            }
+        }
+    }
+
+    antinodes
+}
+
+fn get_count_of_unique_antinodes_for_antennas_with_harmonics(input: &str) -> u32 {
+    let (width, height) = get_map_width_height(input);
+    let antenna_set = get_antennas(input);
+
+    let mut antinodes = HashSet::new();
+    for antennas in antenna_set.values() {
+        for antinode in get_antinodes_for_antenna_set_with_harmonics(&antennas[..], width, height) {
+            antinodes.insert(antinode);
+        }
+    }
+
+    u32::try_from(antinodes.len()).unwrap()
+}
+
 fn main() {
     const INPUT: &str = include_str!("../inputs/8.txt");
 
     println!("Unique antennas: {}", get_count_of_unique_antinodes_for_antennas(INPUT));
+    println!("Unique antennas with resonant harmonics: {}", get_count_of_unique_antinodes_for_antennas_with_harmonics(INPUT));
 }
 
 const EXAMPLE_INPUT: &str = "............
@@ -116,4 +169,9 @@ const EXAMPLE_INPUT: &str = "............
 #[test]
 fn unique_antinodes_example() {
     assert_eq!(get_count_of_unique_antinodes_for_antennas(EXAMPLE_INPUT), 14);
+}
+
+#[test]
+fn unique_antinodes_with_harmonics_example() {
+    assert_eq!(get_count_of_unique_antinodes_for_antennas_with_harmonics(EXAMPLE_INPUT), 34);
 }
