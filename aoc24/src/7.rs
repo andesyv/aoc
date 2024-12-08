@@ -28,12 +28,14 @@ fn parse(input: &str) -> Vec<Equation> {
 enum Op {
     Add,
     Multiply,
+    Concatenate,
 }
 
 fn arithmetic(a: u64, b: u64, operators: &[Op]) -> HashSet<u64> {
     operators.iter().map(|op|match op {
         Op::Add => a + b,
         Op::Multiply => a * b,
+        Op::Concatenate => u64::from_str(format!("{}{}", a, b).as_str()).unwrap(),
     }).collect()
 }
 
@@ -85,9 +87,22 @@ fn sum_of_valid_equations(equations: &[Equation]) -> u64 {
     sum
 }
 
+fn sum_of_valid_equations_with_new_operator(equations: &[Equation]) -> u64 {
+    let mut sum = 0;
+    for equation in equations {
+        if can_equation_be_solved(equation, &[Op::Add, Op::Multiply, Op::Concatenate]) {
+            sum += equation.result;
+        }
+    }
+    sum
+}
+
 fn main() {
     const INPUT: &str = include_str!("../inputs/7.txt");
-    println!("Sum of valid equations: {}", sum_of_valid_equations(&parse(INPUT)));
+    let parsed = parse(INPUT);
+    println!("Sum of valid equations: {}", sum_of_valid_equations(&parsed));
+
+    println!("Sum of valid equations with new operator: {}", sum_of_valid_equations_with_new_operator(&parsed));
 }
 
 const EXAMPLE_INPUT: &str =
@@ -126,4 +141,10 @@ fn parse_test() {
 fn sum_of_valid_equations_test() {
     let sut = parse(EXAMPLE_INPUT);
     assert_eq!(sum_of_valid_equations(&sut), 3749);
+}
+
+#[test]
+fn sum_of_valid_equations_with_new_operator_test() {
+    let sut = parse(EXAMPLE_INPUT);
+    assert_eq!(sum_of_valid_equations_with_new_operator(&sut), 11387);
 }
