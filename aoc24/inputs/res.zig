@@ -5,3 +5,4 @@ pub const input_4 = @embedFile("4.txt");
 pub const input_5 = @embedFile("5.txt");
 pub const input_6 = @embedFile("6.txt");
 pub const input_7 = @embedFile("7.txt");
+pub const input_9 = @embedFile("9.txt");
