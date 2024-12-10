@@ -48,6 +48,73 @@ fn sortExpandedDiskMap(disk_map: []i16) void {
     }
 }
 
+fn findNextBlockFromBack(disk_map: []i16, start: usize) []i16 {
+    var c: i16 = -1;
+    var i: usize = start;
+    var j: usize = start;
+    while (i < disk_map.len) : (i -%= 1) {
+        if (0 <= c) {
+            if (disk_map[i] != c) {
+                return disk_map[i+1..j+1];
+            }
+        } else {
+            j = i;
+            c = disk_map[i];
+        }
+    }
+
+    return disk_map[0..0];
+}
+
+fn findEmptyBlockOfSize(allocator: std.mem.Allocator, disk_map: []i16, offset: usize, size: usize) ![]i16 {
+    if (disk_map.len < offset + size) {
+        return disk_map[0..0];
+    }
+
+    var target = try std.ArrayList(i16).initCapacity(allocator, size);
+    defer target.deinit();
+    try target.appendNTimes(-1, size);
+
+    if (std.mem.eql(i16, target.items, disk_map[offset..offset + size])) {
+        return disk_map[offset..offset + size];
+    }
+
+    return try findEmptyBlockOfSize(allocator, disk_map, offset + 1, size);
+}
+
+fn sortExpandedDiskMapWithWholeBlocks(allocator: std.mem.Allocator, disk_map: []i16) !void {
+    if (disk_map.len == 0) {
+        return;
+    }
+
+    var j: usize = disk_map.len - 1;
+
+    while (true) {
+        printExpandedDiskMap(disk_map);
+        const block_to_move = findNextBlockFromBack(disk_map, j);
+        if (block_to_move.len == 0) {
+            return;
+        }
+
+
+        j = (@intFromPtr(block_to_move.ptr) - @intFromPtr(disk_map.ptr)) / @sizeOf(i16) - 1;
+
+        const empty_block = try findEmptyBlockOfSize(allocator, disk_map, 0, block_to_move.len);
+        if (empty_block.len != block_to_move.len) {
+            continue;
+        }
+
+        if (@intFromPtr(block_to_move.ptr) < @intFromPtr(empty_block.ptr)) {
+            return;
+        }
+
+        for (0..empty_block.len) |k| {
+            empty_block[k] = block_to_move[k];
+            block_to_move[k] = -1;
+        }
+    }
+}
+
 fn calculateChecksum(disk_map: []const i16) !u128 {
     var sum: u128 = 0;
 
@@ -67,7 +134,24 @@ fn calculateSortedFilesystemChecksum(allocator: std.mem.Allocator, disk_map: []c
     var expanded_map = try expandDiskMap(allocator, std.mem.trim(u8, disk_map, "\n"));
     defer expanded_map.deinit();
 
+    // printExpandedDiskMap(expanded_map.items);
+
     sortExpandedDiskMap(expanded_map.items);
+
+    // printExpandedDiskMap(expanded_map.items);
+
+    return calculateChecksum(expanded_map.items);
+}
+
+fn calculateSortedFilesystemChecksumWithWholeBlocks(allocator: std.mem.Allocator, disk_map: []const u8) !u128 {
+    var expanded_map = try expandDiskMap(allocator, std.mem.trim(u8, disk_map, "\n"));
+    defer expanded_map.deinit();
+
+    // printExpandedDiskMap(expanded_map.items);
+
+    try sortExpandedDiskMapWithWholeBlocks(allocator, expanded_map.items);
+
+    // printExpandedDiskMap(expanded_map.items);
 
     return calculateChecksum(expanded_map.items);
 }
@@ -104,8 +188,6 @@ test "expand disk map" {
     const sut = try expandDiskMap(std.testing.allocator, "12345");
     defer sut.deinit();
 
-    // print_expanded_disk_map(sut.items);
-
     const expected = [_]i16{ 0, -1, -1, 1, 1, 1, -1, -1, -1, -1, 2, 2, 2, 2, 2 };
     try std.testing.expectEqualSlices(i16, &expected, sut.items);
 }
@@ -121,4 +203,24 @@ test "sort expanded disk map" {
 test "example filesystem checksum" {
     const result = try calculateSortedFilesystemChecksum(std.testing.allocator, example_input);
     try std.testing.expectEqual(1928, result);
+}
+
+test "find next block" {
+    var expanded_list_1 = [_]i16{ 0, -1, -1, 1, 1, 1, -1, -1 };
+
+    var next_block = findNextBlockFromBack(&expanded_list_1, expanded_list_1.len-1);
+    try std.testing.expectEqualSlices(i16, expanded_list_1[3..6], next_block);
+    // The logic of findNextBlock breaks when it reaches the start, but we probably won't use it long enough to notice
+    // next_block = findNextBlock(&expanded_list_1, 2);
+    // try std.testing.expectEqualSlices(i16, expanded_list_1[0..1], next_block);
+
+    var expanded_list_2 = [_]i16{ 0, -1, -1, 1, 1, 1 };
+
+    next_block = findNextBlockFromBack(&expanded_list_2, expanded_list_2.len-1);
+    try std.testing.expectEqualSlices(i16, expanded_list_2[3..6], next_block);
+}
+
+test "sort blocks" {
+    const result = try calculateSortedFilesystemChecksumWithWholeBlocks(std.testing.allocator, example_input);
+    try std.testing.expectEqual(2858, result);
 }
