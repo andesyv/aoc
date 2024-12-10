@@ -93,6 +93,8 @@ fn find_number_of_tops_reachable_from_trailhead(map: &Map, trailhead: Pos, mut t
             }
         }
 
+        // Note to self: discovered_positions does nothing in this algorithm, because we can only
+        // ever reach nodes that are 1 higher. So it's impossible to loop either way.
         discovered_positions.insert(current_pos);
     }
 
@@ -112,10 +114,47 @@ fn find_score_of_all_trailheads(input: &str) -> Option<u32> {
     Some(total_score)
 }
 
+// Now this one is easy to solve using recursion, which would've not been very obvious
+// if we stuck with the graph finding library mentioned above :/
+fn find_distinct_hiking_trails(map: &Map, current_pos: Pos, current_height: u8) -> u32 {
+    // Base case
+    if current_height == 9 {
+        return 1;
+    }
+
+    let mut sum = 0;
+
+    for new_pos in get_surrounding_positions(current_pos) {
+        if let Some(height) = map.get_char_as_num(new_pos) {
+            // each reachable node has an exact increase of 1
+            if height.wrapping_sub(current_height) == 1 {
+                sum += find_distinct_hiking_trails(&map, new_pos, height);
+            }
+        }
+    }
+
+    sum
+}
+
+fn find_number_of_distinct_hiking_trails_for_all_trailheads(input: &str) -> Option<u32> {
+    let map = Map::new(input)?;
+    let trailheads = map.find_trailheads();
+    // let tops = map.find_tops();
+
+    let mut total_score = 0;
+    for trailhead in trailheads {
+        total_score += find_distinct_hiking_trails(&map, trailhead, 0);
+    }
+
+    Some(total_score)
+}
+
 fn main() {
     const INPUT: &str = include_str!("../inputs/10.txt");
 
-    println!("Sum of all trailheads: {}", find_score_of_all_trailheads(INPUT).unwrap());
+    println!("Sum of the score of all trailheads: {}", find_score_of_all_trailheads(INPUT).unwrap());
+
+    println!("Sum of the number of distinct trails for all trailheads: {}", find_number_of_distinct_hiking_trails_for_all_trailheads(INPUT).unwrap());
 }
 
 const EXAMPLE_INPUT: &str = "89010123
@@ -153,4 +192,10 @@ fn map_parse_test() {
 fn find_score_of_all_trailheads_test() {
     let sut = find_score_of_all_trailheads(EXAMPLE_INPUT).unwrap();
     assert_eq!(sut, 36);
+}
+
+#[test]
+fn sum_of_all_distinct_trails_test() {
+    let sut = find_number_of_distinct_hiking_trails_for_all_trailheads(EXAMPLE_INPUT).unwrap();
+    assert_eq!(sut, 81);
 }
