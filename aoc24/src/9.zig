@@ -1,4 +1,4 @@
- const std = @import("std");
+const std = @import("std");
 
 // The puzzle input is 20k characters. As IDs as stored sequentially, this means the potential largest entry needs to
 // be able to store a number with 20k digits. Which is within the limit of a u16 (2¹⁶ = 65536). However, we also need
@@ -64,7 +64,7 @@ fn findNextBlockFromBack(disk_map: []i16, start: usize) ?Block {
     while (i < disk_map.len) : (i -%= 1) {
         if (0 <= c) {
             if (disk_map[i] != c) {
-                return Block{ .start = i+1, .end = j+1 };
+                return Block{ .start = i + 1, .end = j + 1 };
             }
         } else {
             j = i;
@@ -118,8 +118,8 @@ fn findEmptyBlockOfSize(allocator: std.mem.Allocator, disk_map: []i16, offset: u
     defer target.deinit();
     try target.appendNTimes(-1, size);
 
-    if (std.mem.eql(i16, target.items, disk_map[offset..offset + size])) {
-        return disk_map[offset..offset + size];
+    if (std.mem.eql(i16, target.items, disk_map[offset .. offset + size])) {
+        return disk_map[offset .. offset + size];
     }
 
     return try findEmptyBlockOfSize(allocator, disk_map, offset + 1, size);
@@ -293,7 +293,7 @@ test "example filesystem checksum" {
 test "find next block" {
     var expanded_list_1 = [_]i16{ 0, -1, -1, 1, 1, 1, -1, -1 };
 
-    var next_block = try (findNextBlockFromBack(&expanded_list_1, expanded_list_1.len-1) orelse error.NoBlock);
+    var next_block = try (findNextBlockFromBack(&expanded_list_1, expanded_list_1.len - 1) orelse error.NoBlock);
     try std.testing.expectEqualSlices(i16, expanded_list_1[3..6], expanded_list_1[next_block.start..next_block.end]);
     // The logic of findNextBlock breaks when it reaches the start, but we probably won't use it long enough to notice
     // next_block = findNextBlock(&expanded_list_1, 2);
@@ -301,7 +301,7 @@ test "find next block" {
 
     var expanded_list_2 = [_]i16{ 0, -1, -1, 1, 1, 1 };
 
-    next_block = try (findNextBlockFromBack(&expanded_list_2, expanded_list_2.len-1) orelse error.NoBlock);
+    next_block = try (findNextBlockFromBack(&expanded_list_2, expanded_list_2.len - 1) orelse error.NoBlock);
     try std.testing.expectEqualSlices(i16, expanded_list_2[3..6], expanded_list_2[next_block.start..next_block.end]);
 }
 
