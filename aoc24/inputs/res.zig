@@ -7,3 +7,4 @@ pub const input_6 = @embedFile("6.txt");
 pub const input_7 = @embedFile("7.txt");
 pub const input_9 = @embedFile("9.txt");
 pub const input_16 = @embedFile("16.txt");
+pub const input_17 = @embedFile("17.txt");
