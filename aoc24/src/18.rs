@@ -79,7 +79,7 @@ impl Grid {
             .collect()
     }
 
-    fn find_cost_of_escape_route(&self) -> u32 {
+    fn find_cost_of_escape_route(&self) -> Option<u32> {
         let goal = (self.width - 1, self.height - 1);
 
         let mut processed = HashSet::new();
@@ -90,7 +90,7 @@ impl Grid {
         }]);
         while let Some(PosHeapEntry { cost, pos, .. }) = to_process.pop() {
             if pos == goal {
-                return cost;
+                return Some(cost);
             }
 
             for next_position in self.get_surrounding_positions(pos) {
@@ -109,7 +109,22 @@ impl Grid {
             processed.insert(pos);
         }
 
-        u32::MAX
+        None
+    }
+
+    fn get_coordinate_of_first_blocking_byte(&mut self, next_bytes: &[Pos]) -> Pos {
+        // This brute force approach is not a very fast algorithm. A* is pretty fast, but only when
+        // it comes to finding the first best path. Once the board starts filling up, it will take
+        // longer and longer to compute. So while this will eventually find the answer, it's gonna
+        // take a while.
+        for byte in next_bytes {
+            self.simulate_bytes(&[*byte]);
+            if self.find_cost_of_escape_route().is_none() {
+                return *byte;
+            }
+        }
+
+        panic!("No blocking byte found!");
     }
 }
 
@@ -133,11 +148,17 @@ fn main() {
     const INPUT: &str = include_str!("../inputs/18.txt");
 
     let mut grid = Grid::new();
-    grid.simulate_bytes(&parse(INPUT)[..1024]);
+    let bytes = parse(INPUT);
+    grid.simulate_bytes(&bytes[..1024]);
 
     println!(
         "Cost of escape route after simulating 1024 bytes: {}",
-        grid.find_cost_of_escape_route()
+        grid.find_cost_of_escape_route().unwrap()
+    );
+
+    println!(
+        "Coordinate of first blocking byte: {:?}",
+        grid.get_coordinate_of_first_blocking_byte(&bytes[1024..])
     );
 }
 
@@ -171,5 +192,14 @@ const EXAMPLE_INPUT: &str = "5,4
 fn cost_of_escape_route_for_example() {
     let mut grid = Grid::new_for_example();
     grid.simulate_bytes(&parse(EXAMPLE_INPUT)[..12]);
-    assert_eq!(grid.find_cost_of_escape_route(), 22);
+    assert_eq!(grid.find_cost_of_escape_route(), Some(22));
 }
+
+#[test]
+fn coordinate_of_first_blocking_byte_for_example() {
+    let mut grid = Grid::new_for_example();
+    let bytes = parse(EXAMPLE_INPUT);
+    grid.simulate_bytes(&bytes[..12]);
+    assert_eq!(grid.get_coordinate_of_first_blocking_byte(&bytes[12..]), (6, 1));
+}
+
