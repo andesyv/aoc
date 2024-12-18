@@ -80,14 +80,14 @@ const VM = struct {
     }
 
     fn execute(self: *@This(), allocator: std.mem.Allocator) !void {
-        const io_out = std.io.getStdOut();
+        const io_out = std.io.getStdOut().writer();
         var outputs = try self.evaluate(allocator, self.*.instructions.items);
         defer outputs.deinit();
 
-        var formatted_list = format_number_list(allocator, outputs.items);
+        var formatted_list = try format_number_list(allocator, outputs.items);
         defer formatted_list.deinit();
 
-        try std.fmt.format(io_out, "Program outputs: {s}\n", .{ formatted_list });
+        try std.fmt.format(io_out, "Program outputs: {s}\n", .{ formatted_list.items });
     }
 };
 
@@ -103,7 +103,7 @@ fn format_number_list(allocator: std.mem.Allocator, numbers: []const u32) !std.A
 }
 
 fn parse(allocator: std.mem.Allocator, input: []const u8) !VM {
-    var line_it = std.mem.split(u8, input, "\n");
+    var line_it = std.mem.splitScalar(u8, input, '\n');
 
     var line = try (line_it.next() orelse error.ParseError);
     const register_a = try std.fmt.parseInt(u32, std.mem.trimLeft(u8, line, "Register A: "), 0);
