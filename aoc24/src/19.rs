@@ -39,28 +39,38 @@ use std::time::Instant;
 fn parse(input: &str) -> Option<(Vec<&str>, Vec<&str>)> {
     let mut lines = input.lines();
     let first_line = lines.next()?;
-    let patterns = first_line.trim().split(", ").filter_map(|segment|{
-        let trimmed = segment.trim();
-        if !trimmed.is_empty() {
-            Some(trimmed)
-        } else {
-            None
-        }
-    }).collect();
+    let patterns = first_line
+        .trim()
+        .split(", ")
+        .filter_map(|segment| {
+            let trimmed = segment.trim();
+            if !trimmed.is_empty() {
+                Some(trimmed)
+            } else {
+                None
+            }
+        })
+        .collect();
 
     let mut strings = Vec::new();
     while let Some(line) = lines.next() {
         let trimmed = line.trim();
-        if trimmed.is_empty() { continue; }
+        if trimmed.is_empty() {
+            continue;
+        }
         strings.push(trimmed);
     }
 
     Some((patterns, strings))
 }
 
-fn is_combination_possible<'a>(combination: &'a str, patterns: &HashSet<&str>, memoized_results: &mut HashMap<&'a str, bool>) -> bool {
+fn get_possible_combinations_count<'a>(
+    combination: &'a str,
+    patterns: &HashSet<&str>,
+    memoized_results: &mut HashMap<&'a str, usize>,
+) -> usize {
     if combination.is_empty() {
-        return true;
+        return 1;
     }
 
     if let Some(precalculated_result) = memoized_results.get(combination) {
@@ -69,17 +79,17 @@ fn is_combination_possible<'a>(combination: &'a str, patterns: &HashSet<&str>, m
 
     // println!("Checking combination: {}", combination);
 
+    let mut total_combination_count = 0;
     for i in (1..combination.len() + 1).rev() {
         if patterns.contains(&combination[0..i]) {
-            if is_combination_possible(&combination[i..], patterns, memoized_results) {
-                memoized_results.insert(combination, true);
-                return true;
-            }
+            let sub_pattern_combination_count =
+                get_possible_combinations_count(&combination[i..], patterns, memoized_results);
+            total_combination_count += sub_pattern_combination_count;
         }
     }
 
-    memoized_results.insert(combination, false);
-    false
+    memoized_results.insert(combination, total_combination_count);
+    total_combination_count
 }
 
 fn count_possible_combinations(patterns: &[&str], strings: &[&str]) -> usize {
@@ -88,14 +98,35 @@ fn count_possible_combinations(patterns: &[&str], strings: &[&str]) -> usize {
     // safe for this task. Additionally, using a trie would likely be faster. (potential to use
     // the `radix_trie` crate here)
 
-    let pattern_lookup: HashSet<_> = patterns.into_iter().map(|p|*p).collect();
+    let pattern_lookup: HashSet<_> = patterns.into_iter().map(|p| *p).collect();
     let mut pattern_combination_lookup_cache = HashMap::new();
 
     let mut count = 0;
     for string in strings {
-        if is_combination_possible(*string, &pattern_lookup, &mut pattern_combination_lookup_cache) {
+        if get_possible_combinations_count(
+            *string,
+            &pattern_lookup,
+            &mut pattern_combination_lookup_cache,
+        ) > 0
+        {
             count += 1;
         }
+    }
+
+    count
+}
+
+fn sum_of_permutations_per_string(patterns: &[&str], strings: &[&str]) -> usize {
+    let pattern_lookup: HashSet<_> = patterns.into_iter().map(|p| *p).collect();
+    let mut pattern_combination_lookup_cache = HashMap::new();
+
+    let mut count = 0;
+    for string in strings {
+        count += get_possible_combinations_count(
+            *string,
+            &pattern_lookup,
+            &mut pattern_combination_lookup_cache,
+        );
     }
 
     count
@@ -105,13 +136,34 @@ fn get_possible_combinations_from_input(input: &str) -> usize {
     let start = Instant::now();
     let (patterns, strings) = parse(input).unwrap();
     let result = count_possible_combinations(&patterns, &strings);
-    println!("Possible combinations took {}ms to calculate", start.elapsed().as_millis());
+    println!(
+        "Possible combinations took {}ms to calculate",
+        start.elapsed().as_millis()
+    );
+    result
+}
+
+fn get_sum_of_permutations_from_input(input: &str) -> usize {
+    let start = Instant::now();
+    let (patterns, strings) = parse(input).unwrap();
+    let result = sum_of_permutations_per_string(&patterns, &strings);
+    println!(
+        "Sum of permutations per string took {}ms to calculate",
+        start.elapsed().as_millis()
+    );
     result
 }
 
 fn main() {
     const INPUT: &str = include_str!("../inputs/19.txt");
-    println!("Possible combinations: {}", get_possible_combinations_from_input(INPUT));
+    println!(
+        "Possible combinations: {}",
+        get_possible_combinations_from_input(INPUT)
+    );
+    println!(
+        "Sum of all permutations of all combinations: {}",
+        get_sum_of_permutations_from_input(INPUT)
+    );
 }
 
 const EXAMPLE_INPUT: &str = "r, wr, b, g, bwu, rb, gb, br
@@ -123,9 +175,16 @@ rrbgbr
 ubwu
 bwurrg
 brgr
-bbrgwb"; // 6 / 8 are possible
+bbrgwb";
+// 6 / 8 are possible
+// Possible combinations per stack: 2 + 1 + 4 + 6 + 1 + 0 + 2 + 0 = 16
 
 #[test]
 fn count_possible_combinations_from_example() {
     assert_eq!(get_possible_combinations_from_input(EXAMPLE_INPUT), 6);
+}
+
+#[test]
+fn sum_of_permutations_per_string_from_example() {
+    assert_eq!(get_sum_of_permutations_from_input(EXAMPLE_INPUT), 16);
 }
