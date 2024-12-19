@@ -44,7 +44,12 @@ path = "src/16.rs"
 name = "18"
 path = "src/18.rs"
 
+[[bin]]
+name = "19"
+path = "src/19.rs"
+
 [dependencies]
 itertools = "0.13.0"
 memoize = "0.4.2"
+radix_trie = "0.2.1"
 regex = "1.11.1"
