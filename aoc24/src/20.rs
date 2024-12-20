@@ -1,3 +1,4 @@
+use itertools::Itertools;
 use std::collections::{HashMap, HashSet};
 
 type Pos = (i64, i64);
@@ -16,6 +17,12 @@ fn get_intermediate_position(a: Pos, b: Pos) -> Pos {
     let (a_x, a_y) = a;
     let (b_x, b_y) = b;
     (a_x + (b_x - a_x) / 2, a_y + (b_y - a_y) / 2)
+}
+
+fn get_manhattan_distance(a: Pos, b: Pos) -> usize {
+    let (a_x, a_y) = a;
+    let (b_x, b_y) = b;
+    (a_x.abs_diff(b_x) + a_y.abs_diff(b_y)) as usize
 }
 
 struct Map<'a> {
@@ -134,8 +141,13 @@ impl<'a> Map<'a> {
         n: usize,
         normal_track_cost: &HashMap<Pos, usize>,
     ) -> usize {
-        let cheats = self.get_cheats_and_timesaves(normal_track_cost);
-        cheats.iter().filter(|(_, _, save)| *save >= n).count()
+        self.get_count_of_cheats_that_would_save_n_picoseconds_with_m_picoseconds_skips(
+            n,
+            2,
+            normal_track_cost,
+        )
+        // let cheats = self.get_cheats_and_timesaves(normal_track_cost);
+        // cheats.iter().filter(|(_, _, save)| *save >= n).count()
     }
 
     fn print_map_and_cheats(&self, cheats: &[(Pos, Pos, usize)]) {
@@ -157,6 +169,48 @@ impl<'a> Map<'a> {
             println!()
         }
     }
+
+    fn get_count_of_cheats_that_would_save_n_picoseconds_with_m_picoseconds_skips(
+        &self,
+        n: usize,
+        m: usize,
+        normal_track_cost: &HashMap<Pos, usize>,
+    ) -> usize {
+        if normal_track_cost.len() <= n {
+            return 0;
+        }
+
+        // cheats are allowed to traverse any distance even across tracks (not only walls). Thus,
+        // per definition, any spot that is reachable within 20 moves of another, counts as a
+        // cheat.
+
+        // Step one: reorder the track costs as a linear list (each position is increment with
+        // 1 anyway, so this time around we just use that as an index instead).
+        let track_cost_linear_lookup: Vec<_> = normal_track_cost
+            .iter()
+            .sorted_by(|(_, a), (_, b)| a.cmp(b))
+            .map(|(pos, _)| *pos)
+            .collect();
+
+        let mut count = 0;
+
+        for (i, target_pos) in track_cost_linear_lookup[n..].iter().enumerate() {
+            let target_cost = n + i;
+            for (starting_cost, starting_pos) in track_cost_linear_lookup
+                [..track_cost_linear_lookup.len().min(target_cost - n)]
+                .iter()
+                .enumerate()
+            {
+                let distance = get_manhattan_distance(*target_pos, *starting_pos);
+                if distance > m || target_cost - (starting_cost + distance) < n {
+                    continue;
+                }
+                count += 1;
+            }
+        }
+
+        count
+    }
 }
 
 fn main() {
@@ -165,7 +219,19 @@ fn main() {
     let normal_track_results = map.traverse_track_normally();
     println!("Track traversed");
 
-    println!("Count of cheats that saves at least a 100 picoseconds: {}", map.get_count_of_cheats_that_would_save_n_picoseconds(100, &normal_track_results));
+    println!(
+        "Count of cheats that saves at least 100 picoseconds: {}",
+        map.get_count_of_cheats_that_would_save_n_picoseconds(100, &normal_track_results)
+    );
+
+    println!(
+        "Count of cheats that saves at least 100 picoseconds with up to 20 picoseconds skips: {}",
+        map.get_count_of_cheats_that_would_save_n_picoseconds_with_m_picoseconds_skips(
+            100,
+            20,
+            &normal_track_results
+        )
+    )
 }
 
 const EXAMPLE_INPUT: &str = "###############
@@ -241,5 +307,35 @@ fn cheat_time_saving_test() {
     assert_eq!(
         map.get_count_of_cheats_that_would_save_n_picoseconds(40, &normal_track_records),
         2
+    );
+}
+
+#[test]
+fn cheat_time_saving_with_20_picoseconds_skips_test() {
+    let map = Map::new(EXAMPLE_INPUT);
+    let normal_track_records = map.traverse_track_normally();
+    assert_eq!(
+        map.get_count_of_cheats_that_would_save_n_picoseconds_with_m_picoseconds_skips(
+            76,
+            20,
+            &normal_track_records
+        ),
+        3
+    );
+    assert_eq!(
+        map.get_count_of_cheats_that_would_save_n_picoseconds_with_m_picoseconds_skips(
+            74,
+            20,
+            &normal_track_records
+        ),
+        3 + 4
+    );
+    assert_eq!(
+        map.get_count_of_cheats_that_would_save_n_picoseconds_with_m_picoseconds_skips(
+            72,
+            20,
+            &normal_track_records
+        ),
+        3 + 4 + 22
     );
 }
