@@ -52,6 +52,10 @@ path = "src/19.rs"
 name = "20"
 path = "src/20.rs"
 
+[[bin]]
+name = "22"
+path = "src/22.rs"
+
 [dependencies]
 itertools = "0.13.0"
 memoize = "0.4.2"
