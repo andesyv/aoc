@@ -56,3 +56,49 @@ pub fn count_times_dial_ended_up_as_position_zero_test() {
   assert first.count_times_dial_ended_up_as_position_zero(input, option.None)
     == 3
 }
+
+pub fn example_instruction_part2_test() {
+  assert first.apply_instruction_and_count_times_passed_zero(first.Left(68), 50)
+    == #(82, 1)
+  assert first.apply_instruction_and_count_times_passed_zero(
+      first.Left(168),
+      50,
+    )
+    == #(82, 2)
+  assert first.apply_instruction_and_count_times_passed_zero(
+      first.Right(60),
+      95,
+    )
+    == #(55, 1)
+
+  assert first.apply_instruction_and_count_times_passed_zero(first.Left(82), 14)
+    == #(32, 1)
+  assert first.apply_instruction_and_count_times_passed_zero(
+      first.Left(182),
+      14,
+    )
+    == #(32, 2)
+
+  assert first.apply_instruction_and_count_times_passed_zero(
+      first.Right(1000),
+      50,
+    )
+    == #(50, 10)
+}
+
+pub fn count_times_dial_passed_position_zero_test() {
+  let input = [
+    first.Left(68),
+    first.Left(30),
+    first.Right(48),
+    first.Left(5),
+    first.Right(60),
+    first.Left(55),
+    first.Left(1),
+    first.Left(99),
+    first.Right(14),
+    first.Left(82),
+  ]
+
+  assert first.count_times_dial_passed_position_zero(input, option.None) == 6
+}
