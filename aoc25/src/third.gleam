@@ -1,7 +1,6 @@
 import gleam/int
 import gleam/io
 import gleam/list
-import gleam/result
 import gleam/string
 import simplifile
 
@@ -12,10 +11,17 @@ pub fn main() {
   let input = input |> parse
   let joltage_part1 =
     input
-    |> sum_of_joltage_from_banks
+    |> sum_of_joltage_from_banks_part1
     |> int.to_string
 
-  io.println("Total output joltage: " <> joltage_part1)
+  io.println("Total output joltage (part 1): " <> joltage_part1)
+
+  let joltage_part2 =
+    input
+    |> sum_of_joltage_from_banks_part2
+    |> int.to_string
+
+  io.println("Total output joltage (part 2): " <> joltage_part2)
 }
 
 pub fn parse(input: String) -> List(List(Int)) {
@@ -28,32 +34,51 @@ pub fn parse(input: String) -> List(List(Int)) {
   })
 }
 
-fn calc_joltage(left_battery: Int, right_battery: Int) -> Int {
-  left_battery * 10 + right_battery
+fn integer_power(num: Int, n: Int) -> Int {
+  assert n >= 0
+  case n == 0 {
+    True -> 1
+    False -> num * integer_power(num, n - 1)
+  }
 }
 
-pub fn find_largest_joltage_in_bank(bank: List(Int)) -> Int {
-  // Our logic is simple:
-  // We start with the left-most number. Then we find the largest number of the remaining ones calculate the "joltage".
-  // Finally, we continue this process down the list and return the largest value
-
-  case bank {
-    [] -> 0
-    [left, right] -> calc_joltage(left, right)
-    [left, ..rest] -> {
-      let max = rest |> list.max(int.compare) |> result.unwrap(0)
-      let joltage = calc_joltage(left, max)
-      let sub_joltage = find_largest_joltage_in_bank(rest)
-      case joltage > sub_joltage {
-        True -> joltage
-        False -> sub_joltage
+fn find_largest_digit(bank: List(Int), battery_count: Int) -> #(Int, List(Int)) {
+  case list.length(bank) < battery_count, bank {
+    True, _ -> #(0, [])
+    False, [] -> #(0, [])
+    // False, [x] -> x
+    False, [x, ..rest] -> {
+      let subresult = find_largest_digit(rest, battery_count)
+      case x >= subresult.0 {
+        True -> #(x, rest)
+        False -> subresult
       }
     }
   }
 }
 
-pub fn sum_of_joltage_from_banks(banks: List(List(Int))) -> Int {
+pub fn find_largest_joltage_in_bank(bank: List(Int), battery_count: Int) -> Int {
+  // We'll make use of the fact that a larger digit on the very left of an exact digit number,
+  // is always greater than another number with a smaller digit to the very left.
+  case battery_count {
+    0 -> 0
+    _ -> {
+      let #(digit, rest) = find_largest_digit(bank, battery_count)
+      digit
+      * integer_power(10, battery_count - 1)
+      + find_largest_joltage_in_bank(rest, battery_count - 1)
+    }
+  }
+}
+
+pub fn sum_of_joltage_from_banks_part1(banks: List(List(Int))) -> Int {
   banks
-  |> list.map(find_largest_joltage_in_bank)
+  |> list.map(fn(bank) { find_largest_joltage_in_bank(bank, 2) })
+  |> list.fold(0, int.add)
+}
+
+pub fn sum_of_joltage_from_banks_part2(banks: List(List(Int))) -> Int {
+  banks
+  |> list.map(fn(bank) { find_largest_joltage_in_bank(bank, 12) })
   |> list.fold(0, int.add)
 }
