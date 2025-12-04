@@ -9,13 +9,22 @@ pub fn main() {
   io.println("Hello day 4!")
   let assert Ok(input) = simplifile.read("./inputs/4.txt")
     as "Failed to read file"
+  let input = input |> parse
   let accessible_paper_rolls =
     input
-    |> parse
     |> count_accessible_paper_rolls
     |> int.to_string
 
   io.println("Accessible paper rolls (part 1): " <> accessible_paper_rolls)
+
+  let total_removable_rolls =
+    input
+    |> iteratively_remove_accessible_paper_rolls(0)
+    |> int.to_string
+
+  io.println(
+    "Total paper rolls that can be removed (part 2): " <> total_removable_rolls,
+  )
 }
 
 fn parse_line(line: String, counter: Int) -> List(Int) {
@@ -84,4 +93,36 @@ pub fn count_accessible_paper_rolls(map: Set(#(Int, Int))) -> Int {
   |> set.to_list
   |> list.filter(fn(pos) { can_be_accessed(map, get_adjacents(pos), 0) })
   |> list.length
+}
+
+fn find_first_accessible_pos(
+  map: Set(#(Int, Int)),
+  positions: List(#(Int, Int)),
+) -> Result(#(Int, Int), Nil) {
+  case positions {
+    [] -> Error(Nil)
+    [pos, ..rest] -> {
+      case can_be_accessed(map, get_adjacents(pos), 0) {
+        True -> Ok(pos)
+        False -> find_first_accessible_pos(map, rest)
+      }
+    }
+  }
+}
+
+// This works, but is very slow. Likely because set.to_list runs in linear time.
+// If I could somehow get the "first" element of the set without creating a list
+// from the entire set, this logic could be much faster.
+pub fn iteratively_remove_accessible_paper_rolls(
+  map: Set(#(Int, Int)),
+  currently_removed: Int,
+) -> Int {
+  case find_first_accessible_pos(map, set.to_list(map)) {
+    Ok(next_pos) ->
+      iteratively_remove_accessible_paper_rolls(
+        set.delete(map, next_pos),
+        currently_removed + 1,
+      )
+    _ -> currently_removed
+  }
 }

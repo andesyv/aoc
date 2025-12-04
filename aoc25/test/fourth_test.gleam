@@ -42,3 +42,20 @@ pub fn count_accessible_rolls_of_paper_test() {
 
   assert fourth.count_accessible_paper_rolls(fourth.parse(sut)) == 13
 }
+
+pub fn count_total_paper_rolls_that_can_be_removed_test() {
+  let sut =
+    "..@@.@@@@.
+@@@.@.@.@@
+@@@@@.@.@@
+@.@@@@..@.
+@@.@@@@.@@
+.@@@@@@@.@
+.@.@.@.@@@
+@.@@@.@@@@
+.@@@@@@@@.
+@.@.@@@.@."
+
+  assert fourth.iteratively_remove_accessible_paper_rolls(fourth.parse(sut), 0)
+    == 43
+}
