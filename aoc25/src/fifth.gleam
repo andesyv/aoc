@@ -10,13 +10,22 @@ pub fn main() {
   io.println("Hello day 5!")
   let assert Ok(input) = simplifile.read("./inputs/5.txt")
     as "Failed to read file"
+  let input = input |> parse
   let fresh_ingredients =
     input
-    |> parse
     |> count_fresh_ingredients
     |> int.to_string
 
   io.println("Fresh ingredients (part 1): " <> fresh_ingredients)
+
+  let unique_ingredients =
+    input
+    |> count_unique_fresh_ingredients
+    |> int.to_string
+
+  io.println(
+    "Total unique fresh ingredient count (part 2): " <> unique_ingredients,
+  )
 }
 
 pub type Inventory {
@@ -50,6 +59,9 @@ pub fn parse(input: String) -> Inventory {
       }
     })
 
+  // After parsing, restructure the ranges so there are none overlapping ones
+  let fresh_ingredients = fresh_ingredients |> combine_ranges
+
   let available_ingredients =
     ingredients_str
     |> string.split("\n")
@@ -71,7 +83,7 @@ fn is_fresh(fresh_ranges: List(#(Int, Int)), ingredient: Int) -> Bool {
   }
 }
 
-fn count_fresh_ingredients_2(
+fn count_fresh_ingredients_inner_loop(
   fresh_ranges: List(#(Int, Int)),
   ingredients: List(Int),
 ) -> Int {
@@ -82,14 +94,87 @@ fn count_fresh_ingredients_2(
         True -> 1
         False -> 0
       }
-      + count_fresh_ingredients_2(fresh_ranges, rest)
+      + count_fresh_ingredients_inner_loop(fresh_ranges, rest)
     }
   }
 }
 
 pub fn count_fresh_ingredients(inventory: Inventory) -> Int {
-  count_fresh_ingredients_2(
+  count_fresh_ingredients_inner_loop(
     inventory.fresh_ingredients,
     inventory.available_ingredients,
   )
+}
+
+// We combine our ranges like this:
+// 0. First, we sort each range based on it's minimum
+// 1. Then, starting with the next range, we create a new range with the ranges minimum
+// 2. Then we set the current position to the next range's max (if it's larger than the current position) and pop the next range in the list
+// 3.a. If the next range in the list has a minimum lower than the current pos, continue from step 2
+// 3.b. If the next range in the list has a minimum larger than the current pos, finish the new range and start over from step 1.
+pub fn combine_ranges(ranges: List(#(Int, Int))) -> List(#(Int, Int)) {
+  let sorted_ranges = ranges |> list.sort(fn(a, b) { int.compare(a.0, b.0) })
+  case sorted_ranges {
+    [first, ..rest] -> combine_ranges_inner_loop(rest, first)
+    [] -> []
+  }
+}
+
+fn max(left: Int, right: Int) -> Int {
+  case left > right {
+    True -> left
+    False -> right
+  }
+}
+
+fn combine_ranges_inner_loop(
+  sorted_ranges: List(#(Int, Int)),
+  current_range: #(Int, Int),
+) -> List(#(Int, Int)) {
+  case sorted_ranges {
+    [next, ..rest] -> {
+      // ranges are inclusive, so add a +1
+      case next.0 <= current_range.1 + 1 {
+        // Range is within currently built range, simply extend the max
+        True -> {
+          let new_max = max(next.1, current_range.1)
+          combine_ranges_inner_loop(rest, #(current_range.0, new_max))
+        }
+        // Range is outside currently built range. Start a new range
+        False -> [current_range, ..combine_ranges_inner_loop(rest, next)]
+      }
+    }
+    [] -> [current_range]
+  }
+}
+
+// fn append_list_to_set(set: set.Set(a), list: List(a)) -> set.Set(a) {
+//   case list {
+//     [] -> set
+//     [x, ..rest] -> append_list_to_set(set.insert(set, x), rest)
+//   }
+// }
+
+// fn range_to_list(range: #(Int, Int)) -> List(Int) {
+//   list.range(range.0, range.1)
+// }
+
+fn count_unique_fresh_ingredients_inner_loop(
+  fresh_ranges: List(#(Int, Int)),
+) -> Int {
+  // Given that no ranges overlap, the count of unique ingredients is simply the length of each range
+  case fresh_ranges {
+    [] -> 0
+    [x, ..rest] ->
+      case x.1 - x.0 {
+        0 -> 0
+        diff if diff < 0 -> panic as "How?"
+        diff -> diff + 1
+      }
+      + count_unique_fresh_ingredients_inner_loop(rest)
+  }
+}
+
+pub fn count_unique_fresh_ingredients(inventory: Inventory) -> Int {
+  count_unique_fresh_ingredients_inner_loop(inventory.fresh_ingredients)
 }
