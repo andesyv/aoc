@@ -1,3 +1,4 @@
+import gleam/bool
 import gleam/int
 import gleam/io
 import gleam/list
@@ -71,19 +72,15 @@ fn can_be_accessed(
   adjacent_positions: List(#(Int, Int)),
   current_count: Int,
 ) -> Bool {
-  case current_count {
-    count if count >= 4 -> False
-    _ -> {
-      case adjacent_positions {
-        [] -> True
-        [next, ..rest] -> {
-          let count = case set.contains(map, next) {
-            True -> current_count + 1
-            False -> current_count
-          }
-          can_be_accessed(map, rest, count)
-        }
+  use <- bool.guard(current_count >= 4, False)
+  case adjacent_positions {
+    [] -> True
+    [next, ..rest] -> {
+      let count = case set.contains(map, next) {
+        True -> current_count + 1
+        False -> current_count
       }
+      can_be_accessed(map, rest, count)
     }
   }
 }
@@ -126,3 +123,65 @@ pub fn iteratively_remove_accessible_paper_rolls(
     _ -> currently_removed
   }
 }
+// Slime's suggestion
+// fn lookup(pos: #(Int, Int), step: Int, initial_map: Set(#(Int, Int))) -> Int {
+//   case step {
+//     0 ->
+//       case set.contains(initial_map, pos) {
+//         True -> 1
+//         False -> 0
+//       }
+//     _ -> {
+//       // If we now have less than 4 neighbours (in the previous iteration), the current position is now no longer there
+//       // (Look mom, early return in Gleam)
+//       use <- bool.guard(neighbour_count(pos, step - 1, initial_map) < 4, 0)
+//       // Otherwise, ask the general lookup function as per usual
+//       lookup(pos, step - 1, initial_map)
+//     }
+//   }
+// }
+
+// fn neighbour_count(
+//   pos: #(Int, Int),
+//   step: Int,
+//   initial_map: Set(#(Int, Int)),
+// ) -> Int {
+//   get_adjacents(pos)
+//   |> list.map(fn(neighbour_pos) { lookup(neighbour_pos, step, initial_map) })
+//   |> list.fold(0, int.add)
+// }
+
+// fn get_removable_for_all_time_steps(
+//   map: Set(#(Int, Int)),
+//   initial_positions: List(#(Int, Int)),
+//   time_step: Int,
+//   last_removable: Int,
+// ) -> Int {
+//   echo "get_removable_for_all_time_steps: "
+//   echo time_step
+
+//   let current_remaining =
+//     initial_positions
+//     |> list.map(fn(pos) { lookup(pos, time_step, map) })
+//     |> list.fold(0, int.add)
+//   let current_removable = list.length(initial_positions) - current_remaining
+
+//   echo current_removable
+
+//   // Continue increasing time_step until we're no longer progressing
+//   case last_removable != current_removable {
+//     False -> last_removable
+//     True ->
+//       get_removable_for_all_time_steps(
+//         map,
+//         initial_positions,
+//         time_step + 1,
+//         current_removable,
+//       )
+//   }
+// }
+
+// pub fn iteratively_remove_accessible_paper_rolls_2(map: Set(#(Int, Int))) -> Int {
+//   let initial_positions = set.to_list(map)
+//   get_removable_for_all_time_steps(map, initial_positions, 1, 0)
+// }

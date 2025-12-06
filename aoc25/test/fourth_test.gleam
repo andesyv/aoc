@@ -58,4 +58,6 @@ pub fn count_total_paper_rolls_that_can_be_removed_test() {
 
   assert fourth.iteratively_remove_accessible_paper_rolls(fourth.parse(sut), 0)
     == 43
+  // assert fourth.iteratively_remove_accessible_paper_rolls_2(fourth.parse(sut))
+  //   == 43
 }
