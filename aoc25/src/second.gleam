@@ -42,7 +42,7 @@ pub fn main() {
 }
 
 // Helper to make syntax cleaner
-fn strip(s: String) -> Result(String, Nil) {
+pub fn strip(s: String) -> Result(String, Nil) {
   s
   |> string.trim()
   |> string.to_option
